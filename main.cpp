@@ -1,38 +1,50 @@
-// standart
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <regex>
 #include <atomic>
 #include <thread>	
+#include <chrono>
 
-//boost
 #include <boost\filesystem.hpp>
 #include <boost\filesystem\operations.hpp>
 
 #include "TSSQueue.h";
 
 using uli = unsigned long int;
+using clk = std::chrono::steady_clock;
 
 void Search(boost::filesystem::path root_folder);
 void Parse();
+void Log();
 
 CFParser::TSSQueue files;
 std::atomic<bool> parsing = true;
 
-uli files_cnt;
-uli all_lines_cnt;
-uli blank_lines_cnt;
-uli comment_lines_cnt;
+std::atomic<uli> files_cnt;
+std::atomic<uli> all_lines_cnt;
+std::atomic<uli> blank_lines_cnt;
+std::atomic<uli> comment_lines_cnt;
+
+long long parsing_time;
+long long searching_time;
 
 int main(int argc, char** argv)
-{
-	boost::filesystem::path root_folder{ R"(D:\Libraries\boost_1_63_0\boost)" };
+{	
+	// argc[0] - system info
+	boost::filesystem::path root_folder = (argc > 1) ? argv[1] :  R"(D:\~SS\VS_SS_workspace\CFP_00\CFP_00\FindMe)";
 	
-	std::thread parser(Parse);
-	std::thread searcher(Search, root_folder);	
+	std::cout << "Root folder: " << root_folder << std::endl;
+
+	std::thread searcher(Search, root_folder);
+	std::thread parser_1(Parse);
+	std::thread parser_2(Parse);
 
 	searcher.join();
-	parser.join();
+	parser_1.join();
+	parser_2.join();
+
+	Log();
 
 	system("pause");
 	return 0;
@@ -40,6 +52,8 @@ int main(int argc, char** argv)
 
 void Search(boost::filesystem::path root_folder)
 {
+	clk::time_point begin = clk::now();
+
 	std::string temp_file_path = "";
 	std::regex rx_cpp(R"(.*\.(c|h|cpp|hpp)$)");
 	boost::filesystem::recursive_directory_iterator dir(root_folder), end;
@@ -50,34 +64,29 @@ void Search(boost::filesystem::path root_folder)
 
 		if (std::regex_match(temp_file_path, rx_cpp))
 		{
-			// found :)
 			files.Push(temp_file_path);
-
-			// DELETE ME
-			//std::cout << temp_file_path << std::endl;
 		}
+
 		++dir;
 	}
-
 	parsing = false;
+
+	clk::time_point finish = clk::now();
+	searching_time = std::chrono::duration_cast<std::chrono::microseconds>(finish - begin).count() / CLOCKS_PER_SEC;
 }
 
 void Parse()
 {
-	// TODO chrono
-	clock_t start = clock();
-
+	clk::time_point begin = clk::now();
+	
 	std::ifstream parse_stream;
-	std::string path_file_to_parse = "";
+	std::string file_path = "";
 	while (parsing || !files.Empty())
 	{
-		if (files.Empty())
-			continue;
-
-		path_file_to_parse = files.Pop();
+		file_path = files.Pop();
 
 		// Prepare for file parsing
-		parse_stream.open(path_file_to_parse);
+		parse_stream.open(file_path);
 		if (!parse_stream.is_open())
 		{
 			std::cout << "Error opening file!" << std::endl;
@@ -100,11 +109,11 @@ void Parse()
 			{
 				++blank_lines_cnt;
 			}
-			else if (is_multi_comment)		// Check if we're in multiline comment
+			else if (is_multi_comment)	
 			{
 				++comment_lines_cnt;
 				if (std::string::npos != line.find("*/"))
-				{	// If multiline comment ends here
+				{	// Multiline comment ends here
 					is_multi_comment = false;
 				}
 			}
@@ -118,15 +127,31 @@ void Parse()
 				is_multi_comment = true;
 			}
 		}
-
 		parse_stream.close();
 	}
 
-	std::cout << "Count of proceeded files:\t" << files_cnt << std::endl;
-	std::cout << "Count of all lines:\t\t" << all_lines_cnt << std::endl;
-	std::cout << "Count of blank lines:\t\t" << blank_lines_cnt << std::endl;
-	std::cout << "Count of commented lines:\t" << comment_lines_cnt << std::endl;
-	std::cout << "Count of code lines:\t\t" << all_lines_cnt - (blank_lines_cnt + comment_lines_cnt) << std::endl;
+	clk::time_point finish = clk::now();
+	parsing_time = std::chrono::duration_cast<std::chrono::microseconds>(finish - begin).count() / CLOCKS_PER_SEC;
+}
 
-	printf("Time taken: %.3fs\n", (double)(clock() - start) / CLOCKS_PER_SEC);
+void Log()
+{
+	std::ofstream prog_log;
+	prog_log.open("log.txt");
+	if (!prog_log.is_open())
+	{
+		std::cout << "Error opening log file" << std::endl;
+		return;
+	}
+
+	prog_log << "Count of proceeded files:\t" << files_cnt << std::endl;
+	prog_log << "Count of all lines:\t\t" << all_lines_cnt << std::endl;
+	prog_log << "Count of blank lines:\t\t" << blank_lines_cnt << std::endl;
+	prog_log << "Count of commented lines:\t" << comment_lines_cnt << std::endl;
+	prog_log << "Count of code lines:\t\t" << all_lines_cnt - (blank_lines_cnt + comment_lines_cnt) << std::endl;
+
+	prog_log << "Time taken for searching:\t" << searching_time << " ms" << std::endl;
+	prog_log << "Time taken for parsing:\t\t" << parsing_time << " ms" << std::endl;
+
+	prog_log.close();
 }
