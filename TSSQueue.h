@@ -32,11 +32,15 @@ public:
 		return rs;
 	}
 
-	bool Empty() const { return m_queue.empty(); }
+	bool Empty() const 
+	{
+		std::lock_guard<std::mutex> locker(m_mutex);
+		return m_queue.empty();
+	}
 
 private:
 	std::queue<std::string> m_queue;
-	std::mutex m_mutex;
+	mutable std::mutex m_mutex;
 	std::condition_variable m_cond_var;
 };
 
