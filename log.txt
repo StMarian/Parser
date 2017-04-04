@@ -3,5 +3,4 @@ Count of all lines:		2269098
 Count of blank lines:		317041
 Count of commented lines:	475104
 Count of code lines:		1476953
-Time taken for searching:	41245 ms
-Time taken for parsing:		85021 ms
+Total time taken:			81013 ms

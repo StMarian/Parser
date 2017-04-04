@@ -5,6 +5,7 @@
 #include <atomic>
 #include <thread>	
 #include <chrono>
+#include <vector>
 
 #include <boost\filesystem.hpp>
 #include <boost\filesystem\operations.hpp>
@@ -33,16 +34,28 @@ int main(int argc, char** argv)
 {	
 	// argc[0] - system info
 	boost::filesystem::path root_folder = (argc > 1) ? argv[1] :  R"(D:\~SS\VS_SS_workspace\CFP_00\CFP_00\FindMe)";
-	
+
 	std::cout << "Root folder: " << root_folder << std::endl;
 
-	std::thread searcher(Search, root_folder);
-	std::thread parser_1(Parse);
-	std::thread parser_2(Parse);
+	unsigned int optimum_thread_count = std::thread::hardware_concurrency();
+	std::cout << "Optimum thread count: " << optimum_thread_count << std::endl;
+	std::vector<std::thread> parsers;
 
+	clk::time_point begin = clk::now();
+
+	std::thread searcher(Search, root_folder);
+
+	for (unsigned int i = 0; i <= optimum_thread_count - 1; i++)
+		parsers.emplace_back(std::thread(Parse));
+
+	Parse();
 	searcher.join();
-	parser_1.join();
-	parser_2.join();
+
+	for (unsigned int i = 0; i <= optimum_thread_count - 1; i++)
+		parsers[i].join();
+
+	clk::time_point finish = clk::now();
+	parsing_time = std::chrono::duration_cast<std::chrono::microseconds>(finish - begin).count() / CLOCKS_PER_SEC;
 
 	Log();
 
@@ -52,8 +65,6 @@ int main(int argc, char** argv)
 
 void Search(boost::filesystem::path root_folder)
 {
-	clk::time_point begin = clk::now();
-
 	std::string temp_file_path = "";
 	std::regex rx_cpp(R"(.*\.(c|h|cpp|hpp)$)");
 	boost::filesystem::recursive_directory_iterator dir(root_folder), end;
@@ -70,15 +81,10 @@ void Search(boost::filesystem::path root_folder)
 		++dir;
 	}
 	parsing = false;
-
-	clk::time_point finish = clk::now();
-	searching_time = std::chrono::duration_cast<std::chrono::microseconds>(finish - begin).count() / CLOCKS_PER_SEC;
 }
 
 void Parse()
 {
-	clk::time_point begin = clk::now();
-	
 	std::ifstream parse_stream;
 	std::string file_path = "";
 	while (parsing || !files.Empty())
@@ -129,9 +135,6 @@ void Parse()
 		}
 		parse_stream.close();
 	}
-
-	clk::time_point finish = clk::now();
-	parsing_time = std::chrono::duration_cast<std::chrono::microseconds>(finish - begin).count() / CLOCKS_PER_SEC;
 }
 
 void Log()
@@ -150,8 +153,7 @@ void Log()
 	prog_log << "Count of commented lines:\t" << comment_lines_cnt << std::endl;
 	prog_log << "Count of code lines:\t\t" << all_lines_cnt - (blank_lines_cnt + comment_lines_cnt) << std::endl;
 
-	prog_log << "Time taken for searching:\t" << searching_time << " ms" << std::endl;
-	prog_log << "Time taken for parsing:\t\t" << parsing_time << " ms" << std::endl;
+	prog_log << "Total time taken:\t\t\t" << parsing_time << " ms" << std::endl;
 
 	prog_log.close();
 }
