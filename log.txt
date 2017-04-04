@@ -1,6 +1,0 @@
-Count of proceeded files:	12087
-Count of all lines:		2269098
-Count of blank lines:		317041
-Count of commented lines:	327048
-Count of code lines:		1625009
-Total time taken:		84828 ms
