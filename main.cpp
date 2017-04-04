@@ -28,7 +28,6 @@ std::atomic<uli> blank_lines_cnt;
 std::atomic<uli> comment_lines_cnt;
 
 long long parsing_time;
-long long searching_time;
 
 int main(int argc, char** argv)
 {	

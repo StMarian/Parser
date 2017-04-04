@@ -36,7 +36,7 @@ public:
 
 private:
 	std::queue<std::string> m_qu;
-	mutable std::mutex m_mu;
+	std::mutex m_mu;
 	std::condition_variable m_cv;
 };
 
