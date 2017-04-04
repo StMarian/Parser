@@ -6,7 +6,6 @@
 #include <chrono>
 #include <vector>
 
-//#include <boost\filesystem.hpp>
 #include "filesystem\include\boost\filesystem.hpp"
 
 #include "TSSQueue.h";
@@ -147,7 +146,7 @@ void Parse(Data& data)
 			{
 				if (line.find("/*") < 1)	// Comment from starting of a line
 					++data.comment_lines_cnt;
-											// Otherwise, code - than comment, than we won't increment comment lines
+								// Otherwise, code - than comment, than we won't increment comment lines
 				
 				if(std::string::npos == line.find("*/"))	// If it finishes in this line
 					is_multi_comment = true;
