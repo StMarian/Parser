@@ -10,34 +10,34 @@ namespace CFParser
 class TSSQueue final
 {
 public:
-	TSSQueue() : m_qu(), m_mu(), m_cv()
+	TSSQueue() : m_queue(), m_mutex(), m_cond_var()
 	{}
 
 	void Push(std::string rs)
 	{
-		std::lock_guard<std::mutex> locker(m_mu);
-		m_qu.emplace(rs);
-		m_cv.notify_one();
+		std::lock_guard<std::mutex> locker(m_mutex);
+		m_queue.emplace(rs);
+		m_cond_var.notify_one();
 	}
 
 	std::string Pop()
 	{
-		std::unique_lock<std::mutex> locker(m_mu);
+		std::unique_lock<std::mutex> locker(m_mutex);
 
-		while (m_qu.empty())
-			m_cv.wait(locker);
+		while (m_queue.empty())
+			m_cond_var.wait(locker);
 
-		std::string rs = m_qu.front();
-		m_qu.pop();
+		std::string rs = m_queue.front();
+		m_queue.pop();
 		return rs;
 	}
 
-	bool Empty() const { return m_qu.empty(); }
+	bool Empty() const { return m_queue.empty(); }
 
 private:
-	std::queue<std::string> m_qu;
-	std::mutex m_mu;
-	std::condition_variable m_cv;
+	std::queue<std::string> m_queue;
+	std::mutex m_mutex;
+	std::condition_variable m_cond_var;
 };
 
 }

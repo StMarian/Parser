@@ -17,10 +17,10 @@ using clk = std::chrono::steady_clock;
 
 void Search(boost::filesystem::path root_folder);
 void Parse();
-void Log();
+void SaveResults(std::ostream& s = std::cout);
 
 CFParser::TSSQueue files;
-std::atomic<bool> parsing = true;
+bool searching = true;
 
 std::atomic<uli> files_cnt;
 std::atomic<uli> all_lines_cnt;
@@ -33,9 +33,11 @@ int main(int argc, char** argv)
 {	
 	// argc[0] - system info
 	boost::filesystem::path root_folder = (argc > 1) ? argv[1] :  R"(D:\~SS\VS_SS_workspace\CFP_00\CFP_00\FindMe)";
+	std::string info_file_name = (argc > 2) ? argv[2] : "info.txt";
 
 	std::cout << "Root folder: " << root_folder << std::endl;
 
+	// Optimal thread count for mashine, program runs within n+1 threads
 	unsigned int optimum_thread_count = std::thread::hardware_concurrency();
 	std::cout << "Optimum thread count: " << optimum_thread_count << std::endl;
 	std::vector<std::thread> parsers;
@@ -44,19 +46,30 @@ int main(int argc, char** argv)
 
 	std::thread searcher(Search, root_folder);
 
-	for (unsigned int i = 0; i <= optimum_thread_count - 1; i++)
+	for (unsigned int i = 0; i < optimum_thread_count - 1; i++)
 		parsers.emplace_back(std::thread(Parse));
 
 	Parse();
 	searcher.join();
 
-	for (unsigned int i = 0; i <= optimum_thread_count - 1; i++)
+	for (unsigned int i = 0; i < optimum_thread_count - 1; i++)
 		parsers[i].join();
 
 	clk::time_point finish = clk::now();
 	parsing_time = std::chrono::duration_cast<std::chrono::microseconds>(finish - begin).count() / CLOCKS_PER_SEC;
 
-	Log();
+	std::ofstream save_info;
+	save_info.open(info_file_name);
+	if (!save_info.is_open())
+	{
+		std::cout << "Error opening log file" << std::endl;
+		SaveResults();
+	}
+	else
+	{
+		SaveResults(save_info);
+		save_info.close();
+	}
 
 	system("pause");
 	return 0;
@@ -66,9 +79,8 @@ void Search(boost::filesystem::path root_folder)
 {
 	std::string temp_file_path = "";
 	std::regex rx_cpp(R"(.*\.(c|h|cpp|hpp)$)");
-	boost::filesystem::recursive_directory_iterator dir(root_folder), end;
 
-	while (dir != end)
+	for(boost::filesystem::recursive_directory_iterator dir(root_folder), end; dir != end; dir++)
 	{
 		temp_file_path = dir->path().string();
 
@@ -76,17 +88,18 @@ void Search(boost::filesystem::path root_folder)
 		{
 			files.Push(temp_file_path);
 		}
-
-		++dir;
 	}
-	parsing = false;
+	searching = false;
+
+	// start parsing in thread
+	Parse();
 }
 
 void Parse()
 {
 	std::ifstream parse_stream;
 	std::string file_path = "";
-	while (parsing || !files.Empty())
+	while (searching || !files.Empty())
 	{
 		file_path = files.Pop();
 
@@ -94,15 +107,15 @@ void Parse()
 		parse_stream.open(file_path);
 		if (!parse_stream.is_open())
 		{
-			std::cout << "Error opening file!" << std::endl;
-			system("pause");
-			return;
+			std::cout << "Error opening file \"" << file_path << "\"" << std::endl;
+			continue;
 		}
 
 		++files_cnt;
 
+		std::string line;
 		bool is_multi_comment = false;
-		for (std::string line; std::getline(parse_stream, line);)
+		while(std::getline(parse_stream, line))
 		{	// Parsing starts here
 			++all_lines_cnt;
 
@@ -128,31 +141,25 @@ void Parse()
 			}
 			else if (std::string::npos != line.find("/*"))	 // Multiline comment starts here
 			{
-				++comment_lines_cnt;
-				is_multi_comment = true;
+				if (line.find("/*") < 1)	// Comment from starting of a line
+					++comment_lines_cnt;
+											// Otherwise, code - than comment, than we won't increment comment lines
+				
+				if(std::string::npos == line.find("*/"))	// If it finishes in this line
+					is_multi_comment = true;
 			}
 		}
 		parse_stream.close();
 	}
 }
 
-void Log()
+void SaveResults(std::ostream& s)
 {
-	std::ofstream prog_log;
-	prog_log.open("log.txt");
-	if (!prog_log.is_open())
-	{
-		std::cout << "Error opening log file" << std::endl;
-		return;
-	}
-
-	prog_log << "Count of proceeded files:\t" << files_cnt << std::endl;
-	prog_log << "Count of all lines:\t\t" << all_lines_cnt << std::endl;
-	prog_log << "Count of blank lines:\t\t" << blank_lines_cnt << std::endl;
-	prog_log << "Count of commented lines:\t" << comment_lines_cnt << std::endl;
-	prog_log << "Count of code lines:\t\t" << all_lines_cnt - (blank_lines_cnt + comment_lines_cnt) << std::endl;
-
-	prog_log << "Total time taken:\t\t\t" << parsing_time << " ms" << std::endl;
-
-	prog_log.close();
+	s << "Count of proceeded files:\t" << files_cnt << std::endl;
+	s << "Count of all lines:\t\t" << all_lines_cnt << std::endl;
+	s << "Count of blank lines:\t\t" << blank_lines_cnt << std::endl;
+	s << "Count of commented lines:\t" << comment_lines_cnt << std::endl;
+	s << "Count of code lines:\t\t" << all_lines_cnt - (blank_lines_cnt + comment_lines_cnt) << std::endl;
+	
+	s << "Total time taken:\t\t" << parsing_time << " ms" << std::endl;
 }
