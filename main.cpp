@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <boost\filesystem.hpp>
-#include <boost\filesystem\operations.hpp>
 
 #include "TSSQueue.h";
 
@@ -17,10 +16,11 @@ using clk = std::chrono::steady_clock;
 
 struct Data
 {
-	Data() : files(), searching(true), parsing_time(0), files_cnt(0), all_lines_cnt(0), blank_lines_cnt(0), comment_lines_cnt(0)
+	Data() : files(), rx(R"(.*\.(c|h|cpp|hpp)$)") , searching(true), parsing_time(0), files_cnt(0), all_lines_cnt(0), blank_lines_cnt(0), comment_lines_cnt(0)
 	{}
 
 	CFParser::TSSQueue files;
+	std::regex rx;
 	bool searching;
 	long long parsing_time;
 
@@ -85,14 +85,11 @@ int main(int argc, char** argv)
 
 void Search(boost::filesystem::path root_folder, Data& data)
 {
-	std::string temp_file_path = "";
-	std::regex rx_cpp(R"(.*\.(c|h|cpp|hpp)$)");
-
 	for(boost::filesystem::recursive_directory_iterator dir(root_folder), end; dir != end; dir++)
 	{
-		temp_file_path = dir->path().string();
+		std::string temp_file_path = dir->path().string();
 
-		if (std::regex_match(temp_file_path, rx_cpp))
+		if (std::regex_match(temp_file_path, data.rx))
 		{
 			data.files.Push(temp_file_path);
 		}
@@ -105,13 +102,12 @@ void Search(boost::filesystem::path root_folder, Data& data)
 
 void Parse(Data& data)
 {
-	std::ifstream parse_stream;
-	std::string file_path = "";
 	while (data.searching || !data.files.Empty())
 	{
-		file_path = data.files.Pop();
+		std::string file_path = data.files.Pop();
 
 		// Prepare for file parsing
+		std::ifstream parse_stream;
 		parse_stream.open(file_path);
 		if (!parse_stream.is_open())
 		{
