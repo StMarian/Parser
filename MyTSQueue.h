@@ -2,7 +2,6 @@
 #include <string>
 #include <queue>
 #include <mutex>
-#include <condition_variable>
 
 namespace CFParser
 {
@@ -12,7 +11,8 @@ class MyTSQueue
 public:
 	MyTSQueue(void);
 
-	void Push(std::string rs);
+	// Only one thread would call this method, so it needn't to be thread-safe
+	void Push(std::string rs) { m_queue.emplace(rs); };
 	std::string Pop();
 
 	bool Empty() const;
@@ -20,7 +20,6 @@ public:
 private:
 	std::queue<std::string> m_queue;
 	mutable std::mutex m_mutex;
-	std::condition_variable m_cond_var;
 };
 
 }
