@@ -14,11 +14,15 @@ void Data::Search(boost::filesystem::path root_folder)
 			m_files.Push(temp_file_path);
 		}
 	}
+
+	m_iam_searching = false;
+
+	Parse();
 }
 
 void Data::Parse()
 {
-	while (!m_files.Empty())
+	while (m_iam_searching || !m_files.Empty())
 	{
 		std::string file_path = m_files.Pop();
 
@@ -40,9 +44,7 @@ void Data::Parse()
 			++m_all_lines_cnt;
 
 			// Removing whitespaces
-			//line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
-			line.erase(std::remove_if(line.begin(), line.end(),
-				/*checking whitespace*/ [](char c) { return (c == '\r' || c == '\t' || c == ' ' || c == '\n'); }), line.end());
+			line.erase(std::remove_if(line.begin(), line.end(), isspace), line.end());
 
 			if (line.empty())
 			{
@@ -81,16 +83,7 @@ void Data::SaveResults(std::ostream & s)
 	s << "Count of blank lines:\t\t" << m_blank_lines_cnt << std::endl;
 	s << "Count of commented lines:\t" << m_comment_lines_cnt << std::endl;
 	s << "Count of code lines:\t\t" << m_all_lines_cnt - (m_blank_lines_cnt + m_comment_lines_cnt) << std::endl;
-	s << "Total time taken:\t\t" << m_total_time << " ms" << std::endl;
-}
-
-bool Data::set_TotalTime(long long time)
-{
-	if (time < 0)
-		return false;
-
-	m_total_time = time;
-	return true;
+	s << "Total time taken:\t\t" << m_total_time << std::endl;
 }
 
 }
