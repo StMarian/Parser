@@ -83,7 +83,7 @@ void Data::SaveResults(std::ostream & s)
 	s << "Count of blank lines:\t\t" << m_blank_lines_cnt << std::endl;
 	s << "Count of commented lines:\t" << m_comment_lines_cnt << std::endl;
 	s << "Count of code lines:\t\t" << m_all_lines_cnt - (m_blank_lines_cnt + m_comment_lines_cnt) << std::endl;
-	s << "Total time taken:\t\t" << m_total_time << std::endl;
+	s << "Total time taken:\t\t" << m_total_time << " ms" << std::endl;
 }
 
 }
