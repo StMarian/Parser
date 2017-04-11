@@ -3,33 +3,33 @@
 namespace CFParser
 {
 
-MyTSQueue::MyTSQueue(void) : m_queue(), m_mutex(), m_cond_var()
+MyTSQueue::MyTSQueue(void) : queue_(), mutex_(), cond_var_()
 {
 }
 
 void MyTSQueue::Push(std::string rs)
 {
-	std::lock_guard<std::mutex> locker(m_mutex);
-	m_queue.emplace(rs);
-	m_cond_var.notify_one();
+	std::lock_guard<std::mutex> locker(mutex_);
+	queue_.emplace(rs);
+	cond_var_.notify_one();
 }
 
 std::string MyTSQueue::Pop()
 {
-	std::unique_lock<std::mutex> locker(m_mutex);
+	std::unique_lock<std::mutex> locker(mutex_);
 
-	while (m_queue.empty())
-		m_cond_var.wait(locker);
+	while (queue_.empty())
+		cond_var_.wait(locker);
 
-	std::string rs = m_queue.front();
-	m_queue.pop();
+	std::string rs = queue_.front();
+	queue_.pop();
 	return rs;
 }
 
-bool MyTSQueue::Empty() const
+bool MyTSQueue::IsEmpty() const
 {
-	std::lock_guard<std::mutex> locker(m_mutex);
-	return m_queue.empty();
+	std::lock_guard<std::mutex> locker(mutex_);
+	return queue_.empty();
 }
 
 }

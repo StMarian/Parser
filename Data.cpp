@@ -3,28 +3,28 @@
 namespace CFParser
 {
 
-void Data::Search(boost::filesystem::path root_folder)
+void Data::Search(const boost::filesystem::path& root_folder)
 {
 	for (boost::filesystem::recursive_directory_iterator dir(root_folder), end; dir != end; dir++)
 	{
 		std::string temp_file_path = dir->path().string();
 
-		if (std::regex_match(temp_file_path, m_rx))
+		if (std::regex_match(temp_file_path, rx_))
 		{
-			m_files.Push(temp_file_path);
+			files_.Push(temp_file_path);
 		}
 	}
 
-	m_iam_searching = false;
+	iam_searching_ = false;
 
 	Parse();
 }
 
 void Data::Parse()
 {
-	while (m_iam_searching || !m_files.Empty())
+	while (iam_searching_ || !files_.IsEmpty())
 	{
-		std::string file_path = m_files.Pop();
+		std::string file_path = files_.Pop();
 
 		// Prepare for file parsing
 		std::ifstream parse_stream;
@@ -35,24 +35,24 @@ void Data::Parse()
 			continue;
 		}
 
-		++m_files_cnt;
+		++files_cnt_;
 
 		std::string line;
 		bool is_multi_comment = false;
 		while (std::getline(parse_stream, line))
 		{	// Parsing starts here
-			++m_all_lines_cnt;
+			++all_lines_cnt_;
 
 			// Removing whitespaces
 			line.erase(std::remove_if(line.begin(), line.end(), isspace), line.end());
 
 			if (line.empty())
 			{
-				++m_blank_lines_cnt;
+				++blank_lines_cnt_;
 			}
 			else if (is_multi_comment)
 			{
-				++m_comment_lines_cnt;
+				++comment_lines_cnt_;
 				if (std::string::npos != line.find("*/"))
 				{	// Multiline comment ends here
 					is_multi_comment = false;
@@ -60,12 +60,12 @@ void Data::Parse()
 			}
 			else if (0 == line.find("//"))	// One-line comment 
 			{
-				++m_comment_lines_cnt;
+				++comment_lines_cnt_;
 			}
 			else if (std::string::npos != line.find("/*"))	 // Multiline comment starts here
 			{
 				if (line.find("/*") < 1)	// Comment from starting of a line
-					++m_comment_lines_cnt;
+					++comment_lines_cnt_;
 				// Otherwise, code - than comment, than we won't increment comment lines
 
 				if (std::string::npos == line.find("*/"))	// If it finishes in this line
@@ -76,14 +76,14 @@ void Data::Parse()
 	}
 }
 
-void Data::SaveResults(std::ostream & s)
+void Data::SaveResults(std::ostream& s)
 {
-	s << "Count of proceeded files:\t" << m_files_cnt << std::endl;
-	s << "Count of all lines:\t\t" << m_all_lines_cnt << std::endl;
-	s << "Count of blank lines:\t\t" << m_blank_lines_cnt << std::endl;
-	s << "Count of commented lines:\t" << m_comment_lines_cnt << std::endl;
-	s << "Count of code lines:\t\t" << m_all_lines_cnt - (m_blank_lines_cnt + m_comment_lines_cnt) << std::endl;
-	s << "Total time taken:\t\t" << m_total_time << " ms" << std::endl;
+	s << "Count of proceeded files:\t" << files_cnt_ << std::endl
+	  << "Count of all lines:\t\t" << all_lines_cnt_ << std::endl
+	  << "Count of blank lines:\t\t" << blank_lines_cnt_ << std::endl
+	  << "Count of commented lines:\t" << comment_lines_cnt_ << std::endl
+	  << "Count of code lines:\t\t" << all_lines_cnt_ - (blank_lines_cnt_ + comment_lines_cnt_) << std::endl
+	  << "Total time taken:\t\t" << total_time_ << " ms" << std::endl;
 }
 
 }

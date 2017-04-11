@@ -1,8 +1,9 @@
+#include "Data.h"
+
 #include <thread>	
 #include <chrono>
 #include <vector>
 
-#include "Data.h"
 using namespace CFParser;
 
 int main(int argc, char** argv)
@@ -34,7 +35,7 @@ int main(int argc, char** argv)
 		parsers[i].join();
 
 	clk::time_point finish = clk::now();
-	auto total_time = (std::chrono::duration_cast<std::chrono::microseconds>(finish - begin).count() / CLOCKS_PER_SEC);
+	auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(finish - begin).count() / CLOCKS_PER_SEC;
 	data.set_m_total_time(total_time);
 
 	// Information console output 

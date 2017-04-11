@@ -14,12 +14,12 @@ public:
 	void Push(std::string rs);
 	std::string Pop();
 
-	bool Empty() const;
+	bool IsEmpty() const;
 
 private:
-	std::queue<std::string> m_queue;
-	mutable std::mutex m_mutex;
-	std::condition_variable m_cond_var;
+	std::queue<std::string> queue_;
+	mutable std::mutex mutex_;
+	std::condition_variable cond_var_;
 };
 
 }

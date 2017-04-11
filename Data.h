@@ -1,11 +1,11 @@
 #pragma once
-#include <atomic>
-#include <regex>
-#include <iostream>
+#include "MyTSQueue.h"
 
 #include "filesystem\include\boost\filesystem.hpp"
 
-#include "MyTSQueue.h"
+#include <atomic>
+#include <regex>
+#include <iostream>
 
 using uli = unsigned long int;
 using clk = std::chrono::steady_clock;
@@ -16,25 +16,26 @@ namespace CFParser
 class Data
 {
 public:
-	Data() : m_files(), m_iam_searching(true),  m_rx(R"(.*\.(c|h|cpp|hpp)$)"), m_total_time(0), m_files_cnt(0), m_all_lines_cnt(0), m_blank_lines_cnt(0), m_comment_lines_cnt(0)
+	Data() : files_(), iam_searching_(true),  rx_(R"(.*\.(c|h|cpp|hpp)$)"), total_time_(0)
+		   , files_cnt_(0), all_lines_cnt_(0), blank_lines_cnt_(0), comment_lines_cnt_(0)
 	{}
 
-	void Search(boost::filesystem::path root_folder);
+	void Search(const boost::filesystem::path& root_folder);
 	void Parse();
 	void SaveResults(std::ostream& s = std::cout);
 
-	void set_m_total_time(unsigned long time) { m_total_time = time; };
+	void set_m_total_time(unsigned long time) { total_time_ = time; };
 
 private:
-	MyTSQueue m_files;
-	bool m_iam_searching;
-	std::regex m_rx;
-	unsigned long m_total_time;
+	MyTSQueue files_;
+	bool iam_searching_;
+	std::regex rx_;
+	unsigned long total_time_;
 
-	std::atomic<uli> m_files_cnt;
-	std::atomic<uli> m_all_lines_cnt;
-	std::atomic<uli> m_blank_lines_cnt;
-	std::atomic<uli> m_comment_lines_cnt;
+	std::atomic<uli> files_cnt_;
+	std::atomic<uli> all_lines_cnt_;
+	std::atomic<uli> blank_lines_cnt_;
+	std::atomic<uli> comment_lines_cnt_;
 };
 
 }
